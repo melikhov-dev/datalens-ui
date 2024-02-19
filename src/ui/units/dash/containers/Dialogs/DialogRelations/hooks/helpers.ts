@@ -496,11 +496,17 @@ export const getCurrentWidgetMeta = ({
     metaData,
     dashkitData,
     widget,
+    itemId,
 }: {
     metaData: DashMetaDataNoRelations;
     dashkitData: DashKit | null;
     widget: DashTabItem;
+    // current item id for widgets with multiple items
+    itemId: string | null;
 }): DashkitMetaDataItem => {
+    if (itemId) {
+        return (metaData?.find((item) => item.itemId === itemId) || {}) as DashkitMetaDataItem;
+    }
     const tabInfo = getCurrentWidgetTabShortInfo(dashkitData, widget);
     return (metaData?.find((item) => item.widgetId === tabInfo.id) || {}) as DashkitMetaDataItem;
 };

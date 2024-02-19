@@ -105,4 +105,5 @@ export type RelationChartType = keyof typeof RELATIONS_CHARTS_ICONS_DICT;
 export type RelationTypeChangeProps = {
     type: RelationType;
     widgetId: DashkitMetaDataItem['widgetId'];
+    itemId: DashkitMetaDataItem['itemId'];
 } & AliasClickHandlerData;

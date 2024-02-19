@@ -30,11 +30,13 @@ export const useRelations = ({
     widget,
     dialogAliases,
     workbookId,
+    itemId,
 }: {
     dashKitRef: React.RefObject<DashKit>;
     widget: DashTabItem;
     dialogAliases: Record<string, string[][]>;
     workbookId: WorkbookId;
+    itemId: string | null;
 }) => {
     const [isInited, setIsInited] = React.useState(false);
     const [isLoading, setIsLoading] = React.useState(false);
@@ -49,6 +51,47 @@ export const useRelations = ({
     >(null);
     const [datasets, setDatasets] = React.useState<DatasetsListData | null>(null);
 
+    const [prevItemId, setPrevItemId] = React.useState(itemId);
+
+    const getCurrentWidgetInfo = React.useCallback(
+        (
+            dashWidgetsMetaData: Omit<DashkitMetaDataItem, 'relations'>[],
+            datasetsList: DatasetsListData,
+        ) => {
+            if (!dashKitRef?.current || !widget || (!dashWidgetsMetaData && !dashWidgetsMeta)) {
+                return;
+            }
+
+            const {connections} = dashKitRef.current.props.config;
+
+            const currentMeta = getCurrentWidgetMeta({
+                metaData: dashWidgetsMetaData,
+                dashkitData: dashKitRef.current,
+                widget,
+                itemId,
+            });
+
+            const currentRelations = getRelationsData({
+                metaData: dashWidgetsMetaData,
+                widgetMeta: currentMeta,
+                aliases: dialogAliases,
+                connections: connections as ConnectionsData,
+                datasets: datasetsList,
+            });
+
+            setCurrentWidgetMeta(currentMeta);
+            setRelations(currentRelations);
+        },
+        [dashKitRef, dashWidgetsMeta, dialogAliases, itemId, widget],
+    );
+
+    if (isInited && itemId !== prevItemId && dashWidgetsMeta && datasets) {
+        setIsLoading(true);
+        getCurrentWidgetInfo(dashWidgetsMeta, datasets);
+        setIsLoading(false);
+        setPrevItemId(itemId);
+    }
+
     React.useEffect(() => {
         const getMetaData = async () => {
             if (!dashKitRef?.current || !widget) {
@@ -61,7 +104,6 @@ export const useRelations = ({
                 data,
                 dashKitRef.current,
             );
-            const {connections} = dashKitRef.current.props.config;
 
             let entriesDatasetsFields: GetEntriesDatasetsFieldsResponse = [];
             if (!isEmpty(entriesList) && (!isEmpty(datasetsList) || !isEmpty(controlsList))) {
@@ -86,12 +128,6 @@ export const useRelations = ({
                 return prevItemTitle.localeCompare(itemTitle);
             });
 
-            const currentMeta = getCurrentWidgetMeta({
-                metaData: dashWidgetsMetaData,
-                dashkitData: dashKitRef.current,
-                widget,
-            });
-
             const fetchedDatasets =
                 entriesDatasetsFields?.filter((item) => item.type === 'dataset') || [];
 
@@ -109,14 +145,6 @@ export const useRelations = ({
                 });
             }
 
-            const currentRelations = getRelationsData({
-                metaData: dashWidgetsMetaData,
-                widgetMeta: currentMeta,
-                aliases: dialogAliases,
-                connections: connections as ConnectionsData,
-                datasets: datasetsList,
-            });
-
             const allUsedParams = dashWidgetsMetaData.reduce((result: string[], item) => {
                 const usedParams = item.usedParams || [];
                 return [...result, ...usedParams];
@@ -133,9 +161,9 @@ export const useRelations = ({
                 });
             }
 
+            getCurrentWidgetInfo(dashWidgetsMetaData, datasetsList);
+
             setIsInited(true);
-            setCurrentWidgetMeta(currentMeta);
-            setRelations(currentRelations);
             setIsLoading(false);
             setDatasets(datasetsList);
             setDashWidgetsMeta(dashWidgetsMetaData);
@@ -148,7 +176,17 @@ export const useRelations = ({
             }
             getMetaData();
         }
-    }, [dashKitRef, isInited, widget, dialogAliases, workbookId]);
+    }, [
+        dashKitRef,
+        isInited,
+        widget,
+        dialogAliases,
+        workbookId,
+        itemId,
+        datasets,
+        dashWidgetsMeta,
+        prevItemId,
+    ]);
 
     return {isLoading, relations, currentWidgetMeta, datasets, dashWidgetsMeta, invalidAliases};
 };

@@ -131,11 +131,17 @@ export const Control = ({
         const statusResponse = getStatus(loadedStatus);
         if (statusResponse) {
             dispatch(setLoadedData({status: statusResponse, loadedData: newLoadedData}));
-            onStatusChanged(id, statusResponse, {
-                ...newLoadedData,
-                sourceType: data.sourceType,
-                id: data.id,
-            });
+            onStatusChanged(
+                id,
+                statusResponse,
+                newLoadedData
+                    ? {
+                          ...newLoadedData,
+                          sourceType: data.sourceType,
+                          id: data.id,
+                      }
+                    : null,
+            );
         }
     };
 

@@ -24,6 +24,7 @@ import {
     CLICK_ACTION_TYPE,
     CONTROL_TYPE,
 } from 'ui/libs/DatalensChartkit/modules/constants/constants';
+import {ActiveControl} from 'ui/libs/DatalensChartkit/types';
 import {isMobileView} from 'ui/utils/mobile';
 
 import {
@@ -243,18 +244,21 @@ class GroupControl extends React.PureComponent<PluginGroupControlProps, PluginGr
     }
 
     private getCurrentWidgetResolvedMetaInfo = (loadedData: ExtendedLoadedData | null) => {
-        const label = loadedData?.uiScheme?.controls[0]?.label || '';
+        let label = '';
+        if (loadedData?.uiScheme && 'controls' in loadedData.uiScheme) {
+            const controls = loadedData.uiScheme.controls as ActiveControl[];
+            label = controls[0].label;
+        }
 
         const widgetMetaInfo = {
             layoutId: this.props.id,
-            chartId: null,
             widgetId: this.props.id,
-            title: this.props.data?.title || '',
+            title: label,
             label,
             params: loadedData?.params,
             defaultParams: this.props.defaults,
             loaded: Boolean(loadedData),
-            entryId: loadedData?.id,
+            itemId: loadedData?.id,
             usedParams: loadedData?.usedParams
                 ? Object.keys(this.filterSignificantParams(loadedData))
                 : null,
@@ -262,7 +266,6 @@ class GroupControl extends React.PureComponent<PluginGroupControlProps, PluginGr
             datasetId: loadedData?.sources?.fields?.datasetId || '',
             type: 'control',
             sourceType: loadedData?.sourceType,
-            visualizationType: null,
             loadError: !loadedData,
         };
 
