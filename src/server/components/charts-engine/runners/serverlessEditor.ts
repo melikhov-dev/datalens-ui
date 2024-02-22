@@ -1,11 +1,19 @@
+import https from 'https';
+
 import {AppContext} from '@gravity-ui/nodekit';
 import axios from 'axios';
 
-import {Feature, isEnabledServerFeature} from '../../../../shared';
+import Utils from '../../../utils';
 import {ProcessorParams} from '../components/processor';
 import {getDuration} from '../components/utils';
 
 import {RunnerHandlerProps} from '.';
+
+const axiosInstance = axios.create({
+    httpsAgent: new https.Agent({
+        rejectUnauthorized: false,
+    }),
+});
 
 export const runServerlessEditor = (
     parentContext: AppContext,
@@ -62,34 +70,23 @@ export const runServerlessEditor = (
 
     ctx.log('ServerlessEditorRunner::PreRun', {duration: getDuration(hrStart)});
 
-    const showChartsEngineDebugInfo = Boolean(
-        isEnabledServerFeature(ctx, Feature.ShowChartsEngineDebugInfo),
-    );
-
     ctx.call('engineProcessing', (cx) => {
         console.log(req.body.config);
-        return axios
-            .post(
-                'https://functions.cloud-preprod.yandex.net/b09ofmog7452cvk6tjdt',
-                req.body.config,
-                {
-                    headers: {
-                        Authorization: 'Bearer ',
-                        'Content-Type': 'application/json',
-                    },
+        const json = JSON.stringify(req.body);
+        console.log(json);
+        return axiosInstance
+            .post('https://functions.cloud-preprod.yandex.net/b09ofmog7452cvk6tjdt', json, {
+                headers: {
+                    Authorization: 'Api-Key',
+                    'Content-Type': 'application/json',
                 },
-            )
+            })
             .then((result) => {
                 cx.log('ServerlessEditorRunner::FullRun', {duration: getDuration(hrStart)});
 
                 if (result) {
+                    console.log(result.data);
                     // TODO use ShowChartsEngineDebugInfo flag
-                    if (
-                        'logs_v2' in result &&
-                        (!res.locals.editMode || !showChartsEngineDebugInfo)
-                    ) {
-                        delete result.logs_v2;
-                    }
 
                     // if ('error' in result) {
                     //     const resultCopy = {...result};
@@ -140,44 +137,25 @@ export const runServerlessEditor = (
 
                     cx.log('PROCESSED_SUCCESSFULLY');
 
-                    res.status(200).send(result);
+                    res.status(200).send(result.data.processResult);
                     // }
                 } else {
                     throw new Error('INVALID_PROCESSING_RESULT');
                 }
             })
             .catch((error) => {
-                cx.logError('PROCESSING_FAILED', error);
+                const message = Utils.getErrorMessage(error);
 
-                if (Number(error.statusCode) >= 200 && Number(error.statusCode) < 400) {
-                    res.status(500).send({
-                        error: {
-                            code: 'ERR.CHARTS.INVALID_SET_ERROR_USAGE',
-                            message: 'Only 4xx/5xx error status codes valid for .setError',
+                cx.logError('PROCESSING_FAILED', new Error(message));
+                const result = {
+                    error: {
+                        code: 'ERR.CHARTS.UNHANDLED_ERROR',
+                        debug: {
+                            message,
                         },
-                    });
-                } else {
-                    const result = {
-                        error: {
-                            ...error,
-                            code: error.code || 'ERR.CHARTS.UNHANDLED_ERROR',
-                            debug: {
-                                message: error.message,
-                                ...(error.debug || {}),
-                            },
-                        },
-                    };
-
-                    if (!showChartsEngineDebugInfo) {
-                        delete result.error.debug;
-
-                        if (result.error.details) {
-                            delete result.error.details.stackTrace;
-                        }
-                    }
-
-                    res.status(error.statusCode || 500).send(result);
-                }
+                    },
+                };
+                res.status(500).send(result);
             })
             .finally(() => {
                 ctx.end();
