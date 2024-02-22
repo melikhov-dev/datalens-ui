@@ -69,12 +69,16 @@ export const runServerlessEditor = (
     ctx.call('engineProcessing', (cx) => {
         console.log(req.body.config);
         return axios
-            .post('https://functions.yandexcloud.net/d4ep901ft3n9m7sdabhv', req.body.config, {
-                headers: {
-                    Authorization: 'Bearer ',
-                    'Content-Type': 'application/json',
+            .post(
+                'https://functions.cloud-preprod.yandex.net/b09ofmog7452cvk6tjdt',
+                req.body.config,
+                {
+                    headers: {
+                        Authorization: 'Bearer ',
+                        'Content-Type': 'application/json',
+                    },
                 },
-            })
+            )
             .then((result) => {
                 cx.log('ServerlessEditorRunner::FullRun', {duration: getDuration(hrStart)});
 
