@@ -2,6 +2,7 @@ import https from 'https';
 
 import {AppContext} from '@gravity-ui/nodekit';
 import axios from 'axios';
+import {isObject} from 'lodash';
 
 import Utils from '../../../utils';
 import {ProcessorParams} from '../components/processor';
@@ -71,9 +72,7 @@ export const runServerlessEditor = (
     ctx.log('ServerlessEditorRunner::PreRun', {duration: getDuration(hrStart)});
 
     ctx.call('engineProcessing', (cx) => {
-        console.log(req.body.config);
         const json = JSON.stringify(req.body);
-        console.log(json);
         return axiosInstance
             .post('https://functions.cloud-preprod.yandex.net/b09ofmog7452cvk6tjdt', json, {
                 headers: {
@@ -84,61 +83,33 @@ export const runServerlessEditor = (
             .then((result) => {
                 cx.log('ServerlessEditorRunner::FullRun', {duration: getDuration(hrStart)});
 
-                if (result) {
-                    console.log(result.data);
-                    // TODO use ShowChartsEngineDebugInfo flag
+                if (result && result.data) {
+                    const {processResult} = result.data;
+                    console.log(processResult);
 
-                    // if ('error' in result) {
-                    //     const resultCopy = {...result};
+                    if ('error' in processResult) {
+                        const resultCopy = {...processResult};
 
-                    //     if ('_confStorageConfig' in resultCopy) {
-                    //         delete resultCopy._confStorageConfig;
-                    //     }
+                        if ('_confStorageConfig' in resultCopy) {
+                            delete resultCopy._confStorageConfig;
+                        }
 
-                    //     cx.log('PROCESSED_WITH_ERRORS', {error: result.error});
+                        cx.log('PROCESSED_WITH_ERRORS', {error: processResult.error});
 
-                    //     let statusCode = 500;
+                        let statusCode = 500;
 
-                    //     if (isObject(result.error) && !showChartsEngineDebugInfo) {
-                    //         const {error} = result;
-                    //         if ('debug' in error) {
-                    //             delete error.debug;
-                    //         }
+                        if (isObject(processResult.error) && processResult.error.statusCode) {
+                            statusCode = processResult.error.statusCode;
 
-                    //         const {details} = error;
+                            delete processResult.error.statusCode;
+                        }
 
-                    //         if (details) {
-                    //             delete details.stackTrace;
+                        res.status(statusCode).send(result.data.processResult);
+                    } else {
+                        cx.log('PROCESSED_SUCCESSFULLY');
 
-                    //             if (details.sources) {
-                    //                 const {sources} = details;
-
-                    //                 Object.keys(sources).forEach((source) => {
-                    //                     if (sources[source]) {
-                    //                         const {body} = sources[source];
-
-                    //                         if (body) {
-                    //                             delete body.debug;
-                    //                         }
-                    //                     }
-                    //                 });
-                    //             }
-                    //         }
-                    //     }
-
-                    //     if (isObject(result.error) && result.error.statusCode) {
-                    //         statusCode = result.error.statusCode;
-
-                    //         delete result.error.statusCode;
-                    //     }
-
-                    //     res.status(statusCode).send(result);
-                    // } else {
-
-                    cx.log('PROCESSED_SUCCESSFULLY');
-
-                    res.status(200).send(result.data.processResult);
-                    // }
+                        res.status(200).send(result.data.processResult);
+                    }
                 } else {
                     throw new Error('INVALID_PROCESSING_RESULT');
                 }
