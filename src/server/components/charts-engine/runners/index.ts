@@ -7,7 +7,6 @@ import {ResolvedConfig} from '../components/storage/types';
 
 import {runChart} from './chart';
 import {runEditor} from './editor';
-import {runServerlessEditor} from './serverlessEditor';
 
 export type Runner = {
     name: string;
@@ -34,7 +33,7 @@ const runners: Runner[] = [
     {
         name: 'editor',
         trigger: new Set([
-            // 'graph_node',
+            'graph_node',
             'table_node',
             'text_node',
             'metric_node',
@@ -47,11 +46,7 @@ const runners: Runner[] = [
         ]),
         handler: runEditor,
     },
-    {
-        name: 'serverlessEditor',
-        trigger: new Set(['graph_node']),
-        handler: runServerlessEditor,
-    },
+
     {
         name: 'wizard',
         trigger: new Set([
