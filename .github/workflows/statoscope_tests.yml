@@ -47,7 +47,7 @@ jobs:
       - name: Download reference stats
         uses: dawidd6/action-download-artifact@v2
         with:
-          workflow: upload-main-stats.yml
+          workflow: statoscope_upload_main_stats.yml
           workflow_conclusion: success
           name: main-stats
           path: ./
