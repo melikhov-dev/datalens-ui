@@ -1,0 +1,54 @@
+name: Statoscope diff analyze
+
+on:
+  workflow_run:
+    workflows: ['Statoscope diff analyze']
+    types:
+      - completed    
+
+jobs:
+  statoscope_publish_report: 
+    name: Publish Statoscope Report
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download Artifacts
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          workflow: ${{ github.event.workflow_run.workflow_id }}
+          run_id: ${{ github.event.workflow_run.id }}
+      - name: Extract env from workflow
+        run: |
+          echo "REPORT_PR_NUMBER=$(cat report/statoscope/report-pr)" >> "$GITHUB_ENV"
+      - name: Upload UI report to S3
+        id: upload-to-s3
+        run: |
+          aws --endpoint-url=${AWS_ENDPOINT} \
+              s3 cp report/statoscope/index.html s3://${AWS_BUCKET}/${{ github.ref }}/; \
+              echo ::set-output name=DOWNLOAD_LINK::$(aws --endpoint-url=${AWS_ENDPOINT} s3 presign s3://${AWS_BUCKET}/${{ github.ref }}/index.html)
+        env:
+          AWS_BUCKET: datalens-public-actions-reports
+          AWS_ENDPOINT: https://storage.yandexcloud.net
+          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ru-central1
+      - name: Create comment text
+        uses: actions/github-script@v5
+        id: create-comment-text
+        with:
+          script: |
+            cp report/statoscope/result.json ./result.json
+            const createStatoscopeComment = require('./scripts/ci/createStatoscopeComment');
+            const downloadLink = "${{ steps.upload-to-s3.outputs.DOWNLOAD_LINK }}";
+            return createStatoscopeComment({downloadLink})
+          result-encoding: string
+      - name: Create Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          number: ${{ env.REPORT_PR_NUMBER }}
+          message: "${{steps.create-comment-text.outputs.result}}"
+    
