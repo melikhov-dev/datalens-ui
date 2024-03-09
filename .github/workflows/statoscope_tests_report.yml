@@ -21,10 +21,11 @@ jobs:
         with:
           workflow: ${{ github.event.workflow_run.workflow_id }}
           run_id: ${{ github.event.workflow_run.id }}
-      - name: Extract pr from workflow
-        id: extract-pr
+      - name: Extract data
+        id: extract-data
         run: |
           echo "REPORT_PR_NUMBER=$(cat statoscope-report/report-pr)" >> "$GITHUB_OUTPUT"
+          cp statoscope-report/result.json ./result.json
       - name: Upload UI report to S3
         id: upload-to-s3
         run: |
@@ -42,17 +43,14 @@ jobs:
         id: create-comment-text
         with:
           script: |
-            cp statoscope-report/result.json ./result.json
             const createStatoscopeComment = require('./scripts/ci/createStatoscopeComment');
-            console.log(steps.upload-to-s3.outputs.DOWNLOAD_LINK);
             const downloadLink = "${{ steps.upload-to-s3.outputs.DOWNLOAD_LINK }}";
             const result = createStatoscopeComment({downloadLink});
-            console.log(result);
             return result;
           result-encoding: string
       - name: Create Comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ steps.extract-pr.outputs.REPORT_PR_NUMBER }}
+          number: ${{ steps.extract-data.outputs.REPORT_PR_NUMBER }}
           message: "${{steps.create-comment-text.outputs.result}}"
     
