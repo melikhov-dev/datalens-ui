@@ -16,6 +16,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+      - uses: actions/checkout@v4
       - name: Download Artifacts
         uses: dawidd6/action-download-artifact@v2
         with:
