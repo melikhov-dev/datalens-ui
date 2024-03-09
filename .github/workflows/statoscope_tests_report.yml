@@ -23,12 +23,12 @@ jobs:
           run_id: ${{ github.event.workflow_run.id }}
       - name: Extract env from workflow
         run: |
-          echo "REPORT_PR_NUMBER=$(cat report/statoscope/report-pr)" >> "$GITHUB_ENV"
+          echo "REPORT_PR_NUMBER=$(cat statoscope-report/report-pr)" >> "$GITHUB_ENV"
       - name: Upload UI report to S3
         id: upload-to-s3
         run: |
           aws --endpoint-url=${AWS_ENDPOINT} \
-              s3 cp report/statoscope/index.html s3://${AWS_BUCKET}/${{ github.ref }}/; \
+              s3 cp statoscope-report/index.html s3://${AWS_BUCKET}/${{ github.ref }}/; \
               echo ::set-output name=DOWNLOAD_LINK::$(aws --endpoint-url=${AWS_ENDPOINT} s3 presign s3://${AWS_BUCKET}/${{ github.ref }}/index.html)
         env:
           AWS_BUCKET: datalens-public-actions-reports
@@ -41,7 +41,7 @@ jobs:
         id: create-comment-text
         with:
           script: |
-            cp report/statoscope/result.json ./result.json
+            cp statoscope-report/result.json ./result.json
             const createStatoscopeComment = require('./scripts/ci/createStatoscopeComment');
             const downloadLink = "${{ steps.upload-to-s3.outputs.DOWNLOAD_LINK }}";
             return createStatoscopeComment({downloadLink})
