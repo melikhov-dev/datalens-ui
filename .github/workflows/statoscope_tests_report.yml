@@ -1,4 +1,4 @@
-name: Statoscope diff analyze
+name: Statoscope report publish
 
 on:
   workflow_run:
