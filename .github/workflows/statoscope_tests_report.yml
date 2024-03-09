@@ -21,15 +21,16 @@ jobs:
         with:
           workflow: ${{ github.event.workflow_run.workflow_id }}
           run_id: ${{ github.event.workflow_run.id }}
-      - name: Extract env from workflow
+      - name: Extract pr from workflow
+        id: extract-pr
         run: |
-          echo "REPORT_PR_NUMBER=$(cat statoscope-report/report-pr)" >> "$GITHUB_ENV"
+          echo "REPORT_PR_NUMBER=$(cat statoscope-report/report-pr)" >> "$GITHUB_OUTPUT"
       - name: Upload UI report to S3
         id: upload-to-s3
         run: |
           aws --endpoint-url=${AWS_ENDPOINT} \
               s3 cp statoscope-report/index.html s3://${AWS_BUCKET}/${{ github.ref }}/; \
-              echo ::set-output name=DOWNLOAD_LINK::$(aws --endpoint-url=${AWS_ENDPOINT} s3 presign s3://${AWS_BUCKET}/${{ github.ref }}/index.html)
+              echo "DOWNLOAD_LINK=$(aws --endpoint-url=${AWS_ENDPOINT} s3 presign s3://${AWS_BUCKET}/${{ github.ref }}/index.html)" >> $GITHUB_OUTPUT
         env:
           AWS_BUCKET: datalens-public-actions-reports
           AWS_ENDPOINT: https://storage.yandexcloud.net
@@ -43,12 +44,15 @@ jobs:
           script: |
             cp statoscope-report/result.json ./result.json
             const createStatoscopeComment = require('./scripts/ci/createStatoscopeComment');
+            console.log(steps.upload-to-s3.outputs.DOWNLOAD_LINK);
             const downloadLink = "${{ steps.upload-to-s3.outputs.DOWNLOAD_LINK }}";
-            return createStatoscopeComment({downloadLink})
+            const result = createStatoscopeComment({downloadLink});
+            console.log(result);
+            return result;
           result-encoding: string
       - name: Create Comment
         uses: marocchino/sticky-pull-request-comment@v2
         with:
-          number: ${{ env.REPORT_PR_NUMBER }}
+          number: ${{ steps.extract-pr.outputs.REPORT_PR_NUMBER }}
           message: "${{steps.create-comment-text.outputs.result}}"
     
