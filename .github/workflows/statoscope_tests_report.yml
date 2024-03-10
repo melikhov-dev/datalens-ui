@@ -58,7 +58,7 @@ jobs:
             **🕵️ Validation errors:** ${data.validation.total}
 
             Full Statoscope report could be found [here ↗️](${data.downloadLink})`;
-            };`
+
           result-encoding: string
       - name: Create Comment
         uses: marocchino/sticky-pull-request-comment@v2
