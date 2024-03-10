@@ -44,10 +44,21 @@ jobs:
         id: create-comment-text
         with:
           script: |
-            const createStatoscopeComment = require('./scripts/ci/createStatoscopeComment');
+            const fs = require('fs');
             const downloadLink = "${{ steps.upload-to-s3.outputs.DOWNLOAD_LINK }}";
-            const result = createStatoscopeComment({downloadLink});
-            return result;
+            const data = JSON.parse(fs.readFileSync('result.json', 'utf8'));
+            data.downloadLink = downloadLink;
+
+            return `**📦 Statoscope quick diff with main-branch:**
+
+            **⏱ Build time:** ${data.buildTime.diff.formatted}
+
+            **⚖️ Initial size:** ${data.initialSize.diff.formatted}
+
+            **🕵️ Validation errors:** ${data.validation.total}
+
+            Full Statoscope report could be found [here ↗️](${data.downloadLink})`;
+            };`
           result-encoding: string
       - name: Create Comment
         uses: marocchino/sticky-pull-request-comment@v2
