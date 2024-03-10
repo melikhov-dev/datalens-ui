@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 module.exports = ({downloadLink}) => {
     const data = JSON.parse(fs.readFileSync('result.json', 'utf8'));
     data.downloadLink = downloadLink;
